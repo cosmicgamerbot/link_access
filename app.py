@@ -10,17 +10,40 @@ import json
 import os
 import traceback
 import threading, time
+import base64
 
 # --------------------
 # Config - edit these
 # --------------------
 BASE_URL = "https://fictional-fiesta-qxj65rvv9qqfxpqq-5000.app.github.dev"
-CRED_FILE = "cred.json"   # your service account JSON (in repo root)
+#CRED_FILE = "cred.json"   # your service account JSON (in repo root)
 SHEET_ID = "14etqLqNgEpJG0Z4i0TPsBykwaxVhANyxS_y0Zw46Rzk"
 DATABASE = "database.db"
 # --------------------
 
+
+
 app = Flask(__name__)
+
+# --------------------
+# Authenticate with Google Sheets
+# --------------------
+try:
+    creds_json = base64.b64decode(os.environ["GOOGLE_CREDENTIALS_B64"])
+    creds_dict = json.loads(creds_json)
+    creds = service_account.Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"]
+    )
+
+    sheet_client = gspread.authorize(creds)
+    sheet = sheet_client.open_by_key(SHEET_ID).sheet1
+    print("✅ Connected to Google Sheet successfully.")
+except Exception as e:
+    sheet = None
+    print("⚠️ Could not connect to Google Sheet:", str(e))
+    traceback.print_exc()
 
 # sanity checks
 if not os.path.exists(CRED_FILE):
