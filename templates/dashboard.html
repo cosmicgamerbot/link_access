@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Link Tracker Dashboard</title>
+<style>
+  body {
+    font-family: "Inter", Arial, sans-serif;
+    background: #f9fafb;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+  }
+
+  h1 {
+    color: #222;
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+
+  form {
+    margin-bottom: 20px;
+  }
+
+  input[type="url"], input[type="text"] {
+    padding: 10px 12px;
+    width: 320px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border 0.2s;
+  }
+
+  input[type="url"]:focus, input[type="text"]:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+  }
+
+  button {
+    padding: 10px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+    transition: background 0.2s;
+  }
+
+  button:hover {
+    background: #1e40af;
+  }
+
+  button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .danger-btn {
+    background: #dc2626;
+  }
+
+  .danger-btn:hover {
+    background: #b91c1c;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  th {
+    background: #f3f4f6;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: left;
+    padding: 12px;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+  }
+
+  tr:hover td {
+    background: #f9fafb;
+  }
+
+  a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .save-btn {
+    margin-right: 6px;
+    background: #10b981;
+  }
+
+  .save-btn:hover {
+    background: #059669;
+  }
+</style>
+
+</head>
+<body>
+  <h1>Link Tracker Dashboard</h1>
+
+  <!-- Form to submit a new URL -->
+  <form method="POST">
+    <input type="url" name="url" placeholder="Paste your link" required>
+    <button type="submit">Shorten</button>
+  </form>
+
+  <form method="POST" action="{{ url_for('clear_links') }}" onsubmit="return confirm('Are you sure you want to delete all links?');">
+    <button type="submit" style="background:red;color:white;padding:8px 12px;">Clear All Links</button>
+</form>
+
+  <!-- Table showing all links -->
+  <table border="1">
+  <tr>
+    <th>Short Code</th>
+    <th>Original URL</th>
+    <th>Clicks</th>
+    <th>Action</th>
+  </tr>
+  {% for code, url, clicks in links %}
+  <tr>
+    <td><input type="text" value="{{ code }}" data-old="{{ code }}" class="short-code"></td>
+    <td><input type="text" value="{{ url }}" class="url"></td>
+    <td>{{ clicks }}</td>
+    <td>
+      <button class="save-btn">Save</button>
+      <a href="{{ base_url }}/{{ code }}" target="_blank">Open</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<script>
+document.querySelectorAll(".save-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const row = this.closest("tr");
+    const oldCode = row.querySelector(".short-code").dataset.old;
+    const newCode = row.querySelector(".short-code").value.trim();
+    const newUrl = row.querySelector(".url").value.trim();
+    const openLink = row.querySelector("a");
+
+    fetch("/update_link", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ old_code: oldCode, new_code: newCode, new_url: newUrl })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) {
+        alert("✅ Updated!");
+        // update stored old code (so next edits work)
+        row.querySelector(".short-code").dataset.old = newCode;
+
+        // 🔥 update the "Open" button right away without refreshing
+        openLink.href = "{{ base_url }}/" + newCode;
+      } else {
+        alert("❌ Error: " + data.error);
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>
